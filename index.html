@@ -1,54 +1,202 @@
 <meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Login</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drone Plans App</title>
   <style>
-    body { font-family: sans-serif; background: #0d1117; color: white; display:flex; justify-content:center; align-items:center; height:100vh; }
-    .box { background:#161b22; padding:30px; border-radius:10px; width:300px; }
-    input { width:100%; margin:10px 0; padding:10px; border:none; border-radius:5px; }
-    button { width:100%; padding:10px; border:none; border-radius:5px; background:#238636; color:white; font-weight:bold; cursor:pointer; }
-    button:hover { background:#2ea043; }
+    *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
+    body{background:#f5f7fb;color:#222;display:flex;justify-content:center;align-items:center;height:100vh;}
+    .container{width:360px;background:#fff;border-radius:15px;box-shadow:0 4px 20px rgba(0,0,0,0.1);padding:20px;text-align:center;}
+    input{width:90%;padding:10px;margin:10px 0;border:1px solid #ccc;border-radius:8px;}
+    button{width:95%;padding:10px;background:#007bff;color:#fff;border:none;border-radius:8px;margin-top:10px;cursor:pointer;font-size:16px;}
+    button:hover{background:#0056b3;}
+    h2{margin-bottom:10px;color:#007bff;}
+    .hidden{display:none;}
+    .dashboard{display:none;}
+    .wallet, .plans{display:none;}
+    .topbar{background:#007bff;color:#fff;padding:10px;border-radius:10px;margin-bottom:15px;text-align:center;}
+    .drone-card{background:#f9f9f9;border-radius:12px;padding:15px;margin:10px 0;box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+    .bottom-nav{position:fixed;bottom:0;left:0;width:100%;background:#007bff;display:flex;justify-content:space-around;padding:10px 0;}
+    .bottom-nav button{background:none;color:white;border:none;font-size:16px;}
+    .wallet-section button{margin:5px 0;}
+    img{max-width:100%;border-radius:10px;}
   </style>
 </head>
 <body>
-  <div class="box">
-    <h2>Login</h2>
-    <input type="text" id="mobile" placeholder="Enter Mobile Number">
-    <input type="password" id="password" placeholder="Enter Password">
-    <button id="loginBtn">Login</button>
-    <button onclick="googleLogin()">Login with Google</button>
-    <button onclick="window.location='register.html'">Register Page</button>
+  <div class="container" id="authPage">
+    <div id="loginPage">
+      <h2>Login</h2>
+      <input type="text" id="loginMobile" placeholder="Enter Mobile Number">
+      <input type="password" id="loginPassword" placeholder="Enter Password">
+      <button onclick="login()">Login</button>
+      <p>Don't have an account? <a href="#" onclick="showRegister()">Register</a></p>
+    </div>
+
+    <div id="registerPage" class="hidden">
+      <h2>Register</h2>
+      <input type="text" id="regMobile" placeholder="Enter Mobile Number">
+      <input type="password" id="regPassword" placeholder="Enter Password">
+      <input type="password" id="regRePassword" placeholder="Re-enter Password">
+      <button onclick="register()">Register</button>
+      <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
+    </div>
   </div>
 
-  <script type="module" src="firebase.js"></script>
+  <!-- Dashboard -->
+  <div class="container dashboard" id="dashboard">
+    <div class="topbar">
+      Balance: ₹<span id="userBalance">0</span>
+    </div>
+
+    <div class="plans" id="plansSection">
+      <h2>Drone Plans</h2>
+      <div id="plansList"></div>
+    </div>
+
+    <div class="wallet wallet-section" id="walletSection">
+      <h2>Wallet</h2>
+      <p>Mobile: <span id="walletMobile"></span></p>
+      <button onclick="showWithdraw()">Withdraw</button>
+      <button onclick="showDeposit()">Deposit</button>
+      <div id="walletExtra"></div>
+    </div>
+
+    <div class="bottom-nav">
+      <button onclick="showPlans()">Plans</button>
+      <button onclick="showWallet()">Wallet</button>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js"></script>
+
   <script type="module">
-    import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getDatabase, ref, set, get, child, update } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
 
-    document.getElementById('loginBtn').addEventListener('click', async () => {
-      const mobile = document.getElementById('mobile').value.trim();
-      const password = document.getElementById('password').value;
+    // 🔥 Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyC65OaEXrv62h6Cs7nXkXZrpOwOt5wm3PQ",
+      authDomain: "ff-tournament-a6ca1.firebaseapp.com",
+      projectId: "ff-tournament-a6ca1",
+      storageBucket: "ff-tournament-a6ca1.firebasestorage.app",
+      messagingSenderId: "105114665949",
+      appId: "1:105114665949:web:f29790d6ccef1593c86c34",
+      measurementId: "G-T77FXWD92W"
+    };
 
-      try {
-        const email = mobile + "@mail.com";
-        await signInWithEmailAndPassword(auth, email, password);
-        localStorage.setItem("mobile", mobile);
-        window.location = "dashboard.html";
-      } catch (e) {
-        alert("Login Failed: " + e.message);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // 🔐 AUTH LOGIC
+    window.showRegister = () => {
+      document.getElementById('registerPage').classList.remove('hidden');
+      document.getElementById('loginPage').classList.add('hidden');
+    };
+
+    window.showLogin = () => {
+      document.getElementById('registerPage').classList.add('hidden');
+      document.getElementById('loginPage').classList.remove('hidden');
+    };
+
+    window.register = async () => {
+      const mobile = document.getElementById("regMobile").value;
+      const pass = document.getElementById("regPassword").value;
+      const repass = document.getElementById("regRePassword").value;
+
+      if (pass !== repass) return alert("Passwords do not match!");
+      const dbRef = ref(db);
+      const snap = await get(child(dbRef, "users/" + mobile));
+      if (snap.exists()) return alert("User already exists!");
+
+      await set(ref(db, "users/" + mobile), { password: pass, balance: 0 });
+      alert("Registered successfully!");
+      showLogin();
+    };
+
+    window.login = async () => {
+      const mobile = document.getElementById("loginMobile").value;
+      const pass = document.getElementById("loginPassword").value;
+      const dbRef = ref(db);
+      const snap = await get(child(dbRef, "users/" + mobile));
+      if (!snap.exists()) return alert("User not found!");
+      const data = snap.val();
+      if (data.password !== pass) return alert("Incorrect password!");
+      localStorage.setItem("loggedUser", mobile);
+      loadDashboard(mobile);
+    };
+
+    async function loadDashboard(mobile) {
+      document.getElementById("authPage").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+      document.getElementById("walletMobile").innerText = mobile;
+      const snap = await get(child(ref(db), "users/" + mobile));
+      if (snap.exists()) {
+        document.getElementById("userBalance").innerText = snap.val().balance || 0;
       }
-    });
-
-    window.googleLogin = async function() {
-      const provider = new GoogleAuthProvider();
-      try {
-        const result = await signInWithPopup(auth, provider);
-        localStorage.setItem("mobile", result.user.email);
-        window.location = "dashboard.html";
-      } catch (e) {
-        alert("Google Login Error: " + e.message);
-      }
+      loadPlans();
+      showPlans();
     }
+
+    function loadPlans() {
+      const plans = [
+        { price: 449, perDay: 150, days: 30 },
+        { price: 899, perDay: 300, days: 30 },
+        { price: 1799, perDay: 600, days: 30 },
+        { price: 3599, perDay: 1200, days: 30 },
+        { price: 7199, perDay: 2400, days: 30 }
+      ];
+      const container = document.getElementById("plansList");
+      container.innerHTML = "";
+      plans.forEach((p, i) => {
+        container.innerHTML += `
+          <div class="drone-card">
+            <img src="https://cdn.pixabay.com/photo/2017/08/30/12/45/drone-2695803_1280.jpg" alt="Drone">
+            <p>Price: ₹${p.price}</p>
+            <p>Daily Income: ₹${p.perDay}</p>
+            <p>Duration: ${p.days} days</p>
+            <button onclick="buyPlan(${p.price})">Buy Now</button>
+          </div>`;
+      });
+    }
+
+    window.buyPlan = async (price) => {
+      const mobile = localStorage.getItem("loggedUser");
+      const snap = await get(child(ref(db), "users/" + mobile));
+      let data = snap.val();
+      if (data.balance < price) return alert("Insufficient balance!");
+      const newBal = data.balance - price;
+      await update(ref(db, "users/" + mobile), { balance: newBal });
+      alert("Plan purchased successfully!");
+      document.getElementById("userBalance").innerText = newBal;
+    };
+
+    window.showPlans = () => {
+      document.getElementById("plansSection").style.display = "block";
+      document.getElementById("walletSection").style.display = "none";
+    };
+
+    window.showWallet = () => {
+      document.getElementById("plansSection").style.display = "none";
+      document.getElementById("walletSection").style.display = "block";
+    };
+
+    window.showWithdraw = () => {
+      const name = prompt("Enter Name:");
+      const acc = prompt("Enter Bank Account Number:");
+      const ifsc = prompt("Enter IFSC Code:");
+      const mobile = localStorage.getItem("loggedUser");
+      alert(`Withdrawal request submitted!\nName: ${name}\nAccount: ${acc}\nIFSC: ${ifsc}`);
+    };
+
+    window.showDeposit = () => {
+      alert("Send payment to UPI: umesh2000@fam\nThen enter your UTR ID below.");
+      const utr = prompt("Enter UTR ID:");
+      const mobile = localStorage.getItem("loggedUser");
+      alert("Deposit request sent successfully!\nUTR: " + utr);
+    };
   </script>
 </body>
 </html>
