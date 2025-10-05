@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wallet App (Firebase Realtime)</title>
+<style>
+  body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: #0d1117;
+    color: white;
+  }
+  .container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  .box {
+    background: #161b22;
+    padding: 30px;
+    border-radius: 10px;
+    width: 300px;
+    box-shadow: 0 0 10px #000;
+  }
+  input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    outline: none;
+  }
+  button {
+    width: 100%;
+    padding: 10px;
+    background: #238636;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  button:hover { background: #2ea043; }
+  .dashboard { display: none; padding: 20px; }
+  .topbar {
+    background: #161b22;
+    padding: 15px;
+    text-align: center;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+  }
+  .balance { margin: 20px 0; text-align: center; font-size: 1.2em; }
+  .buttons {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+  }
+  .buttons button { flex: 1; border-radius: 0; }
+  .plans, .wallet { display: none; padding-bottom: 70px; }
+  .plan-card {
+    background: #161b22;
+    padding: 15px;
+    margin: 10px;
+    border-radius: 10px;
+    text-align: center;
+  }
+  .plan-card img { width: 100%; border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN / REGISTER -->
+<div class="container" id="authContainer">
+  <div class="box" id="loginBox">
+    <h2>Login</h2>
+    <input type="text" id="loginMobile" placeholder="Enter Mobile Number">
+    <input type="password" id="loginPassword" placeholder="Enter Password">
+    <button id="loginBtn">Login</button>
+    <button onclick="showRegister()">Create Account</button>
+  </div>
+
+  <div class="box" id="registerBox" style="display:none;">
+    <h2>Register</h2>
+    <input type="text" id="regMobile" placeholder="Enter Mobile Number">
+    <input type="password" id="regPassword" placeholder="Enter Password">
+    <input type="password" id="regRePassword" placeholder="Re-enter Password">
+    <button id="registerBtn">Register</button>
+    <button onclick="showLogin()">Back to Login</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+  <div class="topbar">My Wallet App</div>
+  <div class="balance">Balance: ₹<span id="balance">0</span></div>
+
+  <div class="plans" id="plansSection">
+    <h3 style="text-align:center;">Available Plans</h3>
+    <div class="plan-card">
+      <img src="https://cdn.pixabay.com/photo/2016/09/08/11/12/drone-1659468_1280.jpg">
+      <p>₹449 Plan - Earn ₹150/day for 30 days</p>
+      <button onclick="buyPlan(449)">Buy Plan</button>
+    </div>
+  </div>
+
+  <div class="wallet" id="walletSection">
+    <h3 style="text-align:center;">Wallet</h3>
+    <p style="text-align:center;">Mobile: <span id="userMobile"></span></p>
+    <button onclick="deposit()">Deposit</button>
+    <button onclick="withdraw()">Withdraw</button>
+    <div style="margin-top:20px;text-align:center;">
+      <button onclick="alert('Coming Soon')">Enable Plans</button><br><br>
+      <button onclick="alert('No history yet')">History</button><br><br>
+      <a href="https://t.me/Aapmaker" target="_blank"><button>Customer Support</button></a>
+    </div>
+  </div>
+
+  <div class="buttons">
+    <button onclick="showPlans()">Plans</button>
+    <button onclick="showWallet()">Wallet</button>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+  import { getDatabase, ref, set, get, child, update } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC65OaEXrv62h6Cs7nXkXZrpOwOt5wm3PQ",
+    authDomain: "ff-tournament-a6ca1.firebaseapp.com",
+    projectId: "ff-tournament-a6ca1",
+    storageBucket: "ff-tournament-a6ca1.firebasestorage.app",
+    messagingSenderId: "105114665949",
+    appId: "1:105114665949:web:f29790d6ccef1593c86c34",
+    measurementId: "G-T77FXWD92W",
+    databaseURL: "https://ff-tournament-a6ca1-default-rtdb.firebaseio.com/"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  function showRegister() {
+    document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('registerBox').style.display = 'block';
+  }
+  function showLogin() {
+    document.getElementById('loginBox').style.display = 'block';
+    document.getElementById('registerBox').style.display = 'none';
+  }
+
+  // ✅ Register
+  document.getElementById('registerBtn').addEventListener('click', async () => {
+    const mobile = document.getElementById('regMobile').value.trim();
+    const pass = document.getElementById('regPassword').value;
+    const repass = document.getElementById('regRePassword').value;
+
+    if (!mobile || !pass || !repass) return alert("All fields are required!");
+    if (pass !== repass) return alert("Passwords do not match!");
+
+    const dbRef = ref(db);
+    const snapshot = await get(child(dbRef, "users/" + mobile));
+
+    if (snapshot.exists()) {
+      alert("User already exists!");
+    } else {
+      await set(ref(db, "users/" + mobile), {
+        password: pass,
+        balance: 0
+      });
+      alert("Registration successful!");
+      showLogin();
+    }
+  });
+
+  // ✅ Login
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    const mobile = document.getElementById('loginMobile').value.trim();
+    const pass = document.getElementById('loginPassword').value;
+
+    const dbRef = ref(db);
+    const snapshot = await get(child(dbRef, "users/" + mobile));
+
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      if (data.password === pass) {
+        localStorage.setItem("loggedUser", mobile);
+        document.getElementById('authContainer').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('userMobile').innerText = mobile;
+        document.getElementById('balance').innerText = data.balance;
+        showPlans();
+      } else {
+        alert("Wrong password!");
+      }
+    } else {
+      alert("User not found!");
+    }
+  });
+
+  // ✅ Other functions
+  window.showPlans = function() {
+    document.getElementById('plansSection').style.display = 'block';
+    document.getElementById('walletSection').style.display = 'none';
+  }
+  window.showWallet = function() {
+    document.getElementById('plansSection').style.display = 'none';
+    document.getElementById('walletSection').style.display = 'block';
+  }
+
+  window.buyPlan = async function(price) {
+    const mobile = localStorage.getItem("loggedUser");
+    const snapshot = await get(child(ref(db), "users/" + mobile));
+    if (!snapshot.exists()) return;
+    const data = snapshot.val();
+
+    if (data.balance >= price) {
+      const newBalance = data.balance - price;
+      await update(ref(db, "users/" + mobile), { balance: newBalance });
+      document.getElementById('balance').innerText = newBalance;
+      alert("Plan purchased successfully!");
+    } else {
+      alert("Insufficient balance!");
+    }
+  }
+
+  window.deposit = function() {
+    const upi = prompt("Pay to UPI: umesh2000@fam\nEnter UTR ID:");
+    if (upi) alert("Deposit request sent!");
+  }
+
+  window.withdraw = function() {
+    const name = prompt("Enter Name:");
+    const acc = prompt("Enter Bank Account Number:");
+    const ifsc = prompt("Enter IFSC Code:");
+    if (name && acc && ifsc) alert("Withdrawal request sent!");
+  }
+
+  window.onload = async function() {
+    const mobile = localStorage.getItem("loggedUser");
+    if (mobile) {
+      const snapshot = await get(child(ref(db), "users/" + mobile));
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        document.getElementById('authContainer').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('userMobile').innerText = mobile;
+        document.getElementById('balance').innerText = data.balance;
+        showPlans();
+      }
+    }
+  }
+</script>
+</body>
+</html>
