@@ -1,420 +1,112 @@
 <meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Realtime Drone Plans (Firebase)</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Auth with Firebase</title>
   <style>
-    :root{
-      --bg:#0f1724; --card:#0b1220; --accent:#06b6d4; --muted:#94a3b8; --success:#10b981;
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
     }
-    *{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, Roboto, "Segoe UI", Arial;}
-    body{margin:0;background:linear-gradient(180deg,#071026 0%, #081226 100%);color:#e6eef6;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
-    .stage{width:380px;max-width:95%;}
-
-    /* Cards & boxes */
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:18px;box-shadow:0 8px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03);}
-    h1,h2{margin:0 0 12px 0;color:#e6f6fb;}
-    label{display:block;font-size:13px;color:var(--muted);margin-top:8px;}
-    input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#e6eef6;margin-top:6px;}
-    button{width:100%;padding:10px;border-radius:10px;border:0;background:var(--accent);color:#042024;font-weight:700;cursor:pointer;margin-top:12px;}
-    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--accent);font-weight:600;}
-    .muted{color:var(--muted);font-size:13px;margin-top:8px;text-align:center;}
-    .hidden{display:none;}
-
-    /* Dashboard */
-    .topbar{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;margin-bottom:12px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));}
-    .balance {font-size:18px;font-weight:800;color:#e6f6fb;}
-    .mobile {font-size:13px;color:var(--muted);}
-
-    /* plans */
-    .plansList{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
-    .planCard{display:flex;gap:10px;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.008));border:1px solid rgba(255,255,255,0.02);}
-    .planCard img{width:90px;height:70px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.03);}
-    .planInfo{flex:1;}
-    .planTitle{font-weight:700;font-size:14px;}
-    .planMeta{font-size:13px;color:var(--muted);margin-top:6px;}
-
-    /* bottom nav */
-    .tabs{display:flex;gap:8px;margin-top:12px;}
-    .tabBtn{flex:1;padding:10px;border-radius:10px;border:0;background:rgba(255,255,255,0.02);color:var(--muted);cursor:pointer;}
-    .tabBtn.active{background:linear-gradient(90deg,var(--accent),#7c3aed);color:#021018;font-weight:800;}
-
-    /* wallet actions */
-    .actions{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
-    .small{font-size:13px;color:var(--muted);}
-
-    .link{color:var(--accent);text-decoration:none;font-weight:700;}
-    footer{margin-top:16px;text-align:center;color:var(--muted);font-size:13px;}
+    button {
+      background: #4285F4;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px;
+    }
+    button:hover {
+      background: #3367D6;
+    }
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(255,255,255,0.1);
+      text-align: center;
+      width: 300px;
+    }
+    img {
+      border-radius: 50%;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
-  <div class="stage">
 
-    <!-- AUTH CARD -->
-    <div id="authCard" class="card">
-      <!-- LOGIN -->
-      <div id="loginView">
-        <h2>Login</h2>
-        <label>Mobile number</label>
-        <input id="loginMobile" placeholder="10 digit mobile" inputmode="numeric"/>
-        <label>Password</label>
-        <input id="loginPassword" type="password" placeholder="Password"/>
-        <button id="loginBtn">Login</button>
-        <button id="showRegister" class="ghost">Create account</button>
-        <div class="muted">New? <a id="goRegister" class="link" href="#">Register here</a></div>
-      </div>
-
-      <!-- REGISTER -->
-      <div id="registerView" class="hidden">
-        <h2>Create account</h2>
-        <label>Mobile number</label>
-        <input id="regMobile" placeholder="10 digit mobile" inputmode="numeric"/>
-        <label>Password</label>
-        <input id="regPassword" type="password" placeholder="Password"/>
-        <label>Re-enter Password</label>
-        <input id="regRePassword" type="password" placeholder="Re-enter Password"/>
-        <button id="registerBtn">Register</button>
-        <button id="showLogin" class="ghost">Back to Login</button>
-      </div>
-    </div>
-
-    <!-- DASHBOARD -->
-    <div id="dashCard" class="card hidden">
-      <div class="topbar">
-        <div>
-          <div class="balance">₹ <span id="uiBalance">0.00</span></div>
-          <div class="mobile">User: <span id="uiMobile">-</span></div>
-        </div>
-        <div style="text-align:right">
-          <button id="btnLogout" class="ghost" style="padding:8px 12px;">Logout</button>
-        </div>
-      </div>
-
-      <div class="tabs" role="tablist">
-        <button id="tabPlans" class="tabBtn active">Plans</button>
-        <button id="tabWallet" class="tabBtn">Bullet</button>
-      </div>
-
-      <!-- PLANS -->
-      <div id="plansView" style="margin-top:10px;">
-        <div class="plansList" id="plansList"></div>
-      </div>
-
-      <!-- WALLET -->
-      <div id="walletView" class="hidden">
-        <div class="actions">
-          <div class="small">Mobile: <b id="walletMobile">-</b></div>
-          <div class="small">Balance: <b id="walletBalance">₹0.00</b></div>
-          <button id="btnDeposit">Deposit (UPI)</button>
-          <button id="btnWithdraw" class="ghost">Withdraw</button>
-          <div id="walletActionsArea"></div>
-          <button id="btnHistory" class="ghost">Plans History</button>
-          <button id="btnSupport" class="ghost">Customer Support (Telegram)</button>
-        </div>
-      </div>
-
-      <footer>Powered by Firebase Realtime DB — demo only</footer>
-    </div>
-
+  <div class="card">
+    <h2>Firebase Google Login</h2>
+    <div id="userDetails"></div>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
   </div>
 
-  <!-- Firebase SDK (modular) -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-    import { getDatabase, ref, set, get, child, update, onValue, push } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+    // Import Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } 
+      from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
 
-    // ====== YOUR FIREBASE CONFIG (you gave this) ======
+    // तुम्हारा Firebase Config
     const firebaseConfig = {
-      apiKey: "AIzaSyC65OaEXrv62h6Cs7nXkXZrpOwOt5wm3PQ",
-      authDomain: "ff-tournament-a6ca1.firebaseapp.com",
-      projectId: "ff-tournament-a6ca1",
-      storageBucket: "ff-tournament-a6ca1.firebasestorage.app",
-      messagingSenderId: "105114665949",
-      appId: "1:105114665949:web:f29790d6ccef1593c86c34",
-      measurementId: "G-T77FXWD92W"
+      apiKey: "AIzaSyBtYFjOBAuDQkcrwKRKP4FzbSb5N5pudYk",
+      authDomain: "v-tok-d78ad.firebaseapp.com",
+      projectId: "v-tok-d78ad",
+      storageBucket: "v-tok-d78ad.firebasestorage.app",
+      messagingSenderId: "448669303511",
+      appId: "1:448669303511:web:7af9fec0b6e0f981eaa692",
+      measurementId: "G-ZJ2L4E58T1"
     };
 
-    // init
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
-    // ===== UI refs =====
-    const authCard = document.getElementById('authCard');
-    const loginView = document.getElementById('loginView');
-    const registerView = document.getElementById('registerView');
-    const dashCard = document.getElementById('dashCard');
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userDetails = document.getElementById("userDetails");
 
-    const loginMobile = document.getElementById('loginMobile');
-    const loginPassword = document.getElementById('loginPassword');
-    const loginBtn = document.getElementById('loginBtn');
-
-    const regMobile = document.getElementById('regMobile');
-    const regPassword = document.getElementById('regPassword');
-    const regRePassword = document.getElementById('regRePassword');
-    const registerBtn = document.getElementById('registerBtn');
-
-    const showRegisterBtn = document.getElementById('showRegister');
-    const showLoginBtn = document.getElementById('showLogin');
-    const goRegisterLink = document.getElementById('goRegister');
-
-    const uiBalance = document.getElementById('uiBalance');
-    const uiMobile = document.getElementById('uiMobile');
-    const btnLogout = document.getElementById('btnLogout');
-
-    const tabPlans = document.getElementById('tabPlans');
-    const tabWallet = document.getElementById('tabWallet');
-    const plansList = document.getElementById('plansList');
-    const plansView = document.getElementById('plansView');
-    const walletView = document.getElementById('walletView');
-
-    const walletMobileEl = document.getElementById('walletMobile');
-    const walletBalanceEl = document.getElementById('walletBalance');
-    const btnDeposit = document.getElementById('btnDeposit');
-    const btnWithdraw = document.getElementById('btnWithdraw');
-    const walletActionsArea = document.getElementById('walletActionsArea');
-    const btnHistory = document.getElementById('btnHistory');
-    const btnSupport = document.getElementById('btnSupport');
-
-    // ===== state =====
-    let currentUser = null;
-    let userListenerRef = null; // to store onValue unsubscriber (not needed in RTDB, we can keep ref and ignore)
-
-    // ===== helpers for DB paths =====
-    const userPath = (mobile) => `users/${mobile}`;
-    const depositsPath = () => `requests/deposits`;
-    const withdrawalsPath = () => `requests/withdrawals`;
-
-    // ===== UI helpers =====
-    function showRegisterView(){
-      loginView.classList.add('hidden');
-      registerView.classList.remove('hidden');
-    }
-    function showLoginView(){
-      registerView.classList.add('hidden');
-      loginView.classList.remove('hidden');
-    }
-    function showDashboardUI(){
-      authCard.classList.add('hidden');
-      dashCard.classList.remove('hidden');
-    }
-    function showAuthUI(){
-      dashCard.classList.add('hidden');
-      authCard.classList.remove('hidden');
-    }
-    function setActiveTab(tabBtn){
-      [tabPlans, tabWallet].forEach(b=>b.classList.remove('active'));
-      tabBtn.classList.add('active');
-    }
-
-    // ===== register =====
-    registerBtn.addEventListener('click', async ()=>{
-      const mobile = regMobile.value.trim();
-      const pw = regPassword.value;
-      const pw2 = regRePassword.value;
-      if(!/^\d{10}$/.test(mobile)){ alert('Valid 10 digit mobile number daalo.'); return; }
-      if(pw.length < 4){ alert('Password kam se kam 4 character hona chahiye.'); return; }
-      if(pw !== pw2){ alert('Password match nahi kar rahe.'); return; }
-
-      const userRef = ref(db, userPath(mobile));
-      const snap = await get(userRef);
-      if(snap.exists()){ alert('User pehle se maujood hai. Login karo.'); return; }
-
-      // Initial user object
-      const userObj = { password: pw, balance: 0, plans: [], createdAt: Date.now() };
-      await set(userRef, userObj);
-      alert('Registration successful! Ab login karo.');
-      // reset
-      regMobile.value = regPassword.value = regRePassword.value = '';
-      showLoginView();
+    // Login Function
+    loginBtn.addEventListener("click", async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (error) {
+        alert("Login failed: " + error.message);
+      }
     });
 
-    // ===== login =====
-    loginBtn.addEventListener('click', async ()=>{
-      const mobile = loginMobile.value.trim();
-      const pw = loginPassword.value;
-      if(!/^\d{10}$/.test(mobile)){ alert('Valid 10 digit mobile number daalo.'); return; }
-      if(!pw){ alert('Password daalo.'); return; }
-
-      const userRef = ref(db, userPath(mobile));
-      const snap = await get(userRef);
-      if(!snap.exists()){ alert('User nahi mila. Pehle register karo.'); return; }
-      const user = snap.val();
-      if(user.password !== pw){ alert('Password galat hai.'); return; }
-
-      // success
-      currentUser = mobile;
-      localStorage.setItem('loggedUser', mobile);
-      attachUserListener(mobile); // realtime updates
-      uiMobile.innerText = mobile;
-      showDashboardUI();
+    // Logout Function
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
     });
 
-    // ===== attach realtime listener for current user =====
-    function attachUserListener(mobile){
-      const r = ref(db, userPath(mobile));
-      // detach previous? (RTDB onValue returns unsubscribe via returned function in modular version — but we used onValue directly)
-      // We'll simply set a new listener; for demo it's fine.
-      onValue(r, (snapshot) => {
-        const data = snapshot.val() || { balance:0 };
-        uiBalance.innerText = Number(data.balance || 0).toFixed(2);
-        walletBalanceEl.innerText = '₹' + Number(data.balance || 0).toFixed(2);
-        walletMobileEl.innerText = mobile;
-        // update plans history or other UI if needed
-      });
-    }
-
-    // ===== logout =====
-    btnLogout.addEventListener('click', ()=>{
-      if(!confirm('Logout confirm karein?')) return;
-      localStorage.removeItem('loggedUser');
-      currentUser = null;
-      showAuthUI();
-    });
-
-    // ===== tabs =====
-    tabPlans.addEventListener('click', ()=>{
-      setActiveTab(tabPlans);
-      plansView.classList.remove('hidden');
-      walletView.classList.add('hidden');
-    });
-    tabWallet.addEventListener('click', ()=>{
-      setActiveTab(tabWallet);
-      plansView.classList.add('hidden');
-      walletView.classList.remove('hidden');
-    });
-
-    // ===== load plans dynamically (10 plans doubling) =====
-    function buildPlans(){
-      plansList.innerHTML = '';
-      let price = 449;
-      let daily = 150;
-      for(let i=1;i<=10;i++){
-        const card = document.createElement('div');
-        card.className = 'planCard';
-        card.innerHTML = `
-          <img src="https://cdn.pixabay.com/photo/2017/08/30/12/45/drone-2695803_1280.jpg" alt="Drone">
-          <div class="planInfo">
-            <div class="planTitle">Plan ${i}</div>
-            <div class="planMeta">Price: ₹${price} • Daily: ₹${daily} • Duration: 30 days</div>
-          </div>
-          <div style="min-width:95px">
-            <button class="buyBtn">Buy</button>
-          </div>
+    // Auth State Change
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        userDetails.innerHTML = `
+          <h3>Welcome, ${user.displayName}</h3>
+          <p>${user.email}</p>
+          <img src="${user.photoURL}" width="80" height="80"/>
         `;
-        // attach price to button
-        card.querySelector('.buyBtn').addEventListener('click', ()=> onBuyPlan(price));
-        plansList.appendChild(card);
-        price = price * 2;
-        daily = daily * 2;
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+      } else {
+        userDetails.innerHTML = `<p>Not logged in</p>`;
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
       }
-    }
-
-    buildPlans();
-
-    // ===== buy plan =====
-    async function onBuyPlan(price){
-      if(!currentUser) { alert('Pahle login karo.'); return; }
-      if(!confirm(`Confirm karte ho plan kharidna ₹${price} me?`)) return;
-      const userRef = ref(db, userPath(currentUser));
-      const snap = await get(userRef);
-      const user = snap.val();
-      const balance = Number(user.balance || 0);
-      if(balance < price){ alert('Insufficient balance!'); return; }
-
-      // deduct balance and push plan entry
-      const newBal = balance - price;
-      const plansArray = user.plans || [];
-      plansArray.push({ price, date: Date.now() });
-      // update
-      await update(userRef, { balance: newBal, plans: plansArray });
-      alert('Plan purchased — balance updated and plan added.');
-    }
-
-    // ===== Deposit flow (create deposit request only) =====
-    btnDeposit.addEventListener('click', async ()=>{
-      if(!currentUser){ alert('Login karo.'); return; }
-      const upi = 'umesh2000@fam';
-      alert(`UPI ID: ${upi}\nPayment karne ke baad UTR ID yahan daalo.`);
-      const utr = prompt('Enter UTR ID (payment reference):');
-      if(!utr) return alert('UTR ID required to submit request.');
-      if(!confirm('Deposit request submit karein? UTR: ' + utr)) return;
-      // push request into /requests/deposits
-      const reqRef = ref(db, depositsPath());
-      const newReqRef = push(reqRef);
-      await set(newReqRef, { mobile: currentUser, utr, amount: 'manual', status:'pending', createdAt: Date.now() });
-      alert('Deposit request submitted. Admin verify karega (balance auto-added nahi hua).');
     });
-
-    // ===== Withdraw flow (deduct immediately & create request) =====
-    btnWithdraw.addEventListener('click', async ()=>{
-      if(!currentUser){ alert('Login karo.'); return; }
-      const name = prompt('Enter name:');
-      if(!name) return alert('Name required.');
-      const acc = prompt('Enter Bank account number:');
-      if(!acc) return alert('Account required.');
-      const ifsc = prompt('Enter IFSC code:');
-      if(!ifsc) return alert('IFSC required.');
-      if(!confirm(`Confirm withdrawal request? Amount will be deducted from your balance.`)) return;
-
-      // create withdrawal request and deduct balance
-      const userRef = ref(db, userPath(currentUser));
-      const snap = await get(userRef);
-      const user = snap.val();
-      const balance = Number(user.balance || 0);
-      if(balance <= 0){ alert('Balance zero — withdrawal nahi ho sakta.'); return; }
-
-      // For demo: deduct full balance (you can change to amount)
-      const deductedAmount = balance; // as per your earlier requirement: cut balance and create request
-      const newBal = 0;
-      await update(userRef, { balance: newBal });
-
-      const wRef = ref(db, withdrawalsPath());
-      const newW = push(wRef);
-      await set(newW, { mobile: currentUser, name, account: acc, ifsc, amount: deductedAmount, status:'pending', createdAt: Date.now() });
-
-      alert('Withdrawal request created and ₹' + deductedAmount + ' deducted from your balance.');
-    });
-
-    // ===== History & Support handlers =====
-    btnHistory.addEventListener('click', async ()=>{
-      if(!currentUser){ alert('Login karo.'); return; }
-      const userRef = ref(db, userPath(currentUser));
-      const snap = await get(userRef);
-      const user = snap.val() || {};
-      const plans = user.plans || [];
-      if(plans.length === 0) return alert('No plans purchased yet.');
-      let msg = 'Plans history:\\n';
-      plans.forEach((p,i)=> msg += `${i+1}. ₹${p.price} on ${new Date(p.date).toLocaleString()}\\n`);
-      alert(msg);
-    });
-
-    btnSupport.addEventListener('click', ()=>{
-      window.open('https://t.me/Aapmaker','_blank');
-    });
-
-    // ===== auto-login if saved =====
-    (async function init(){
-      const saved = localStorage.getItem('loggedUser');
-      if(saved){
-        // check user exists
-        const snap = await get(ref(db, userPath(saved)));
-        if(snap.exists()){
-          currentUser = saved;
-          uiMobile.innerText = saved;
-          attachUserListener(saved);
-          showDashboardUI();
-        } else {
-          localStorage.removeItem('loggedUser');
-        }
-      }
-    })();
-
-    // ===== small navigation links =====
-    showRegisterBtn.addEventListener('click', ()=> showRegisterView());
-    showLoginBtn.addEventListener('click', ()=> showLoginView());
-    goRegisterLink.addEventListener('click',(e)=>{ e.preventDefault(); showRegisterView(); });
-
   </script>
 </body>
 </html>
